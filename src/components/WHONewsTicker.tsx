@@ -122,7 +122,7 @@ const WHONewsTicker = () => {
         </div>
 
         {/* News content */}
-        <div className="p-5 min-h-[140px] flex flex-col justify-between">
+        <div className="p-5 h-[140px] flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">{current.date}</span>
