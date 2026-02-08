@@ -68,14 +68,12 @@ export function getRedShadeMap(
   values.forEach(({ key, val }) => {
     let ratio = (val - min) / range;
 
-    // For healthcareIndex, invert: lower index = more severe
+    // Healthcare index: lower index = worse = darker → invert
     if (filter === "healthcareIndex") {
       ratio = 1 - ratio;
     }
-    // For hospitals/doctors, fewer = more severe → invert
-    if (filter === "hospitals" || filter === "doctors") {
-      ratio = 1 - ratio;
-    }
+    // Hospitals & doctors: more = darker (min→max scale), no inversion
+    // Alerts & climate: more = darker (severity scale), no inversion
 
     result[key] = filterShade(ratio, filter);
   });
