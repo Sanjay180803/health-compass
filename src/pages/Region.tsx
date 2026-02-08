@@ -91,9 +91,9 @@ const Region = () => {
       duration: 1.5,
     });
 
-    // Clear existing markers
+    // Clear existing overlays (circles, markers)
     map.eachLayer((layer) => {
-      if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+      if (layer instanceof L.Circle || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
         map.removeLayer(layer);
       }
     });
@@ -111,15 +111,15 @@ const Region = () => {
       )
       .addTo(map);
 
-    // State markers – circle markers colored in red shades
+    // State area circles – L.circle with radius in meters to cover state area
     Object.entries(states).forEach(([key, stats]) => {
       const color = redShades[key] ?? "hsl(0, 70%, 60%)";
 
-      const circle = L.circleMarker([stats.lat, stats.lng], {
-        radius: 14,
+      const circle = L.circle([stats.lat, stats.lng], {
+        radius: stats.approxRadius,
         color: color,
         fillColor: color,
-        fillOpacity: 0.75,
+        fillOpacity: 0.45,
         weight: 2,
       })
         .bindPopup(
