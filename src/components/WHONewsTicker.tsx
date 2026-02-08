@@ -122,11 +122,11 @@ const WHONewsTicker = () => {
         </div>
 
         {/* News content */}
-        <div className="p-5 h-[140px] flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-muted-foreground">{current.date}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium uppercase tracking-wider">
+        <div className="p-5 h-[140px] flex flex-col justify-between overflow-hidden">
+          <div className="space-y-2 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{current.date}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium uppercase tracking-wider whitespace-nowrap truncate">
                 {current.type}
               </span>
             </div>
