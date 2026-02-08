@@ -33,12 +33,6 @@ const NEWS_ITEMS: NewsItem[] = [
     title: "WHO calls for mental health to be central to neglected tropical disease care",
     url: "https://www.who.int/news/item/04-02-2026-who-calls-for-mental-health-to-be-central-to-neglected-tropical-disease-care",
   },
-  {
-    date: "3 February 2026",
-    type: "Joint News Release",
-    title: "Four in ten cancer cases could be prevented globally",
-    url: "https://www.who.int/news/item/03-02-2026-four-in-ten-cancer-cases-could-be-prevented-globally",
-  },
 ];
 
 const INTERVAL_MS = 10_000;
