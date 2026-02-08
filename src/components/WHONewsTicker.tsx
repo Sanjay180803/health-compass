@@ -85,7 +85,7 @@ const WHONewsTicker = () => {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-card">
+      <div className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-card h-[250px] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-primary text-primary-foreground">
           <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ const WHONewsTicker = () => {
         </div>
 
         {/* News content */}
-        <div className="p-5 h-[140px] flex flex-col justify-between overflow-hidden">
+        <div className="p-5 flex-1 flex flex-col justify-between overflow-hidden">
           <div className="space-y-2 flex-shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{current.date}</span>
