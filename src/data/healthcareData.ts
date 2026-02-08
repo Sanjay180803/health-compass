@@ -7,6 +7,8 @@ export interface RegionStats {
   healthcareIndex: number;
   lat: number;
   lng: number;
+  /** Approximate radius in meters to cover the state area on the map */
+  approxRadius: number;
 }
 
 export interface StateData {
@@ -37,28 +39,28 @@ export function detectCountryFromCoords(lat: number, lng: number): string {
 
 export const regionData: CountryData = {
   "United States": {
-    California: { name: "California", hospitals: 418, doctors: 121000, climate: "Mediterranean / Arid", healthAlerts: ["Wildfire smoke advisory", "Heat wave precaution"], healthcareIndex: 78, lat: 36.78, lng: -119.42 },
-    Texas: { name: "Texas", hospitals: 606, doctors: 71000, climate: "Subtropical / Semi-arid", healthAlerts: ["Hurricane season alert"], healthcareIndex: 65, lat: 31.97, lng: -99.90 },
-    "New York": { name: "New York", hospitals: 214, doctors: 92000, climate: "Humid continental", healthAlerts: ["Flu season peak"], healthcareIndex: 82, lat: 42.16, lng: -74.95 },
-    Florida: { name: "Florida", hospitals: 310, doctors: 64000, climate: "Tropical / Subtropical", healthAlerts: ["Mosquito-borne illness warning", "UV index high"], healthcareIndex: 70, lat: 27.66, lng: -81.52 },
-    Illinois: { name: "Illinois", hospitals: 190, doctors: 42000, climate: "Humid continental", healthAlerts: ["Cold wave advisory"], healthcareIndex: 72, lat: 40.63, lng: -89.40 },
-    Pennsylvania: { name: "Pennsylvania", hospitals: 220, doctors: 48000, climate: "Humid continental", healthAlerts: [], healthcareIndex: 74, lat: 41.20, lng: -77.19 },
-    Ohio: { name: "Ohio", hospitals: 195, doctors: 38000, climate: "Humid continental", healthAlerts: ["Air quality moderate"], healthcareIndex: 68, lat: 40.42, lng: -82.91 },
-    Georgia: { name: "Georgia", hospitals: 155, doctors: 29000, climate: "Humid subtropical", healthAlerts: ["Pollen alert"], healthcareIndex: 62, lat: 32.16, lng: -82.90 },
+    California: { name: "California", hospitals: 418, doctors: 121000, climate: "Mediterranean / Arid", healthAlerts: ["Wildfire smoke advisory", "Heat wave precaution"], healthcareIndex: 78, lat: 36.78, lng: -119.42, approxRadius: 280000 },
+    Texas: { name: "Texas", hospitals: 606, doctors: 71000, climate: "Subtropical / Semi-arid", healthAlerts: ["Hurricane season alert"], healthcareIndex: 65, lat: 31.97, lng: -99.90, approxRadius: 320000 },
+    "New York": { name: "New York", hospitals: 214, doctors: 92000, climate: "Humid continental", healthAlerts: ["Flu season peak"], healthcareIndex: 82, lat: 42.16, lng: -74.95, approxRadius: 160000 },
+    Florida: { name: "Florida", hospitals: 310, doctors: 64000, climate: "Tropical / Subtropical", healthAlerts: ["Mosquito-borne illness warning", "UV index high"], healthcareIndex: 70, lat: 27.66, lng: -81.52, approxRadius: 220000 },
+    Illinois: { name: "Illinois", hospitals: 190, doctors: 42000, climate: "Humid continental", healthAlerts: ["Cold wave advisory"], healthcareIndex: 72, lat: 40.63, lng: -89.40, approxRadius: 180000 },
+    Pennsylvania: { name: "Pennsylvania", hospitals: 220, doctors: 48000, climate: "Humid continental", healthAlerts: [], healthcareIndex: 74, lat: 41.20, lng: -77.19, approxRadius: 150000 },
+    Ohio: { name: "Ohio", hospitals: 195, doctors: 38000, climate: "Humid continental", healthAlerts: ["Air quality moderate"], healthcareIndex: 68, lat: 40.42, lng: -82.91, approxRadius: 140000 },
+    Georgia: { name: "Georgia", hospitals: 155, doctors: 29000, climate: "Humid subtropical", healthAlerts: ["Pollen alert"], healthcareIndex: 62, lat: 32.16, lng: -82.90, approxRadius: 170000 },
   },
   India: {
-    Maharashtra: { name: "Maharashtra", hospitals: 4200, doctors: 85000, climate: "Tropical monsoon", healthAlerts: ["Dengue precaution", "Monsoon water safety"], healthcareIndex: 65, lat: 19.75, lng: 75.71 },
-    Delhi: { name: "Delhi", hospitals: 1100, doctors: 42000, climate: "Semi-arid", healthAlerts: ["Air quality severe", "Heat stroke advisory"], healthcareIndex: 72, lat: 28.70, lng: 77.10 },
-    Karnataka: { name: "Karnataka", hospitals: 3800, doctors: 62000, climate: "Tropical", healthAlerts: ["Malaria precaution"], healthcareIndex: 68, lat: 15.32, lng: 75.71 },
-    "Tamil Nadu": { name: "Tamil Nadu", hospitals: 3500, doctors: 58000, climate: "Tropical wet", healthAlerts: [], healthcareIndex: 70, lat: 11.13, lng: 78.66 },
-    Kerala: { name: "Kerala", hospitals: 3200, doctors: 55000, climate: "Tropical", healthAlerts: ["Flood preparedness"], healthcareIndex: 85, lat: 10.85, lng: 76.27 },
-    "West Bengal": { name: "West Bengal", hospitals: 2800, doctors: 38000, climate: "Tropical wet-and-dry", healthAlerts: ["Cyclone season"], healthcareIndex: 58, lat: 22.99, lng: 87.85 },
+    Maharashtra: { name: "Maharashtra", hospitals: 4200, doctors: 85000, climate: "Tropical monsoon", healthAlerts: ["Dengue precaution", "Monsoon water safety"], healthcareIndex: 65, lat: 19.75, lng: 75.71, approxRadius: 200000 },
+    Delhi: { name: "Delhi", hospitals: 1100, doctors: 42000, climate: "Semi-arid", healthAlerts: ["Air quality severe", "Heat stroke advisory"], healthcareIndex: 72, lat: 28.70, lng: 77.10, approxRadius: 30000 },
+    Karnataka: { name: "Karnataka", hospitals: 3800, doctors: 62000, climate: "Tropical", healthAlerts: ["Malaria precaution"], healthcareIndex: 68, lat: 15.32, lng: 75.71, approxRadius: 180000 },
+    "Tamil Nadu": { name: "Tamil Nadu", hospitals: 3500, doctors: 58000, climate: "Tropical wet", healthAlerts: [], healthcareIndex: 70, lat: 11.13, lng: 78.66, approxRadius: 160000 },
+    Kerala: { name: "Kerala", hospitals: 3200, doctors: 55000, climate: "Tropical", healthAlerts: ["Flood preparedness"], healthcareIndex: 85, lat: 10.85, lng: 76.27, approxRadius: 100000 },
+    "West Bengal": { name: "West Bengal", hospitals: 2800, doctors: 38000, climate: "Tropical wet-and-dry", healthAlerts: ["Cyclone season"], healthcareIndex: 58, lat: 22.99, lng: 87.85, approxRadius: 150000 },
   },
   "United Kingdom": {
-    England: { name: "England", hospitals: 1260, doctors: 165000, climate: "Oceanic", healthAlerts: ["Flu season"], healthcareIndex: 80, lat: 52.36, lng: -1.17 },
-    Scotland: { name: "Scotland", hospitals: 230, doctors: 18000, climate: "Oceanic", healthAlerts: [], healthcareIndex: 78, lat: 56.49, lng: -4.20 },
-    Wales: { name: "Wales", hospitals: 88, doctors: 8600, climate: "Oceanic", healthAlerts: [], healthcareIndex: 75, lat: 52.13, lng: -3.78 },
-    "Northern Ireland": { name: "Northern Ireland", hospitals: 48, doctors: 5200, climate: "Oceanic", healthAlerts: [], healthcareIndex: 74, lat: 54.79, lng: -6.49 },
+    England: { name: "England", hospitals: 1260, doctors: 165000, climate: "Oceanic", healthAlerts: ["Flu season"], healthcareIndex: 80, lat: 52.36, lng: -1.17, approxRadius: 180000 },
+    Scotland: { name: "Scotland", hospitals: 230, doctors: 18000, climate: "Oceanic", healthAlerts: [], healthcareIndex: 78, lat: 56.49, lng: -4.20, approxRadius: 160000 },
+    Wales: { name: "Wales", hospitals: 88, doctors: 8600, climate: "Oceanic", healthAlerts: [], healthcareIndex: 75, lat: 52.13, lng: -3.78, approxRadius: 80000 },
+    "Northern Ireland": { name: "Northern Ireland", hospitals: 48, doctors: 5200, climate: "Oceanic", healthAlerts: [], healthcareIndex: 74, lat: 54.79, lng: -6.49, approxRadius: 60000 },
   },
 };
 
