@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPin } from "lucide-react";
+import { MapPin, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   regionData,
@@ -30,6 +30,7 @@ const Region = () => {
   const [country, setCountry] = useState("United States");
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterType[]>(["healthcareIndex"]);
+  const [chartExpanded, setChartExpanded] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -133,13 +134,13 @@ const Region = () => {
     });
   }, [locationGranted, country, filters, states, mapConfig, userLat, userLng, redShades]);
 
-  // Invalidate map size when layout changes (bar chart toggle)
+  // Invalidate map size when layout changes (bar chart toggle / expand)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const timer = setTimeout(() => map.invalidateSize(), 350);
     return () => clearTimeout(timer);
-  }, [showBarChart]);
+  }, [showBarChart, chartExpanded]);
 
   // ─── Permission screen ─────────────────────────────────────────
   if (!locationGranted) {
@@ -174,7 +175,14 @@ const Region = () => {
       {/* Map section */}
       <div
         className="relative w-full"
-        style={{ height: showBarChart ? "55%" : "100%", transition: "height 0.3s ease" }}
+        style={{
+          height: showBarChart
+            ? chartExpanded
+              ? "25%"
+              : "55%"
+            : "100%",
+          transition: "height 0.3s ease",
+        }}
       >
         <div ref={mapContainerRef} className="h-full w-full z-0" />
 
@@ -216,12 +224,30 @@ const Region = () => {
       {showBarChart && states && (
         <div
           className="w-full bg-card border-t border-border px-4 py-3"
-          style={{ height: "45%" }}
+          style={{
+            height: chartExpanded ? "75%" : "45%",
+            transition: "height 0.3s ease",
+          }}
         >
-          <p className="text-sm font-semibold text-foreground mb-1">
-            Comparison across states
-          </p>
-          <div style={{ height: "calc(100% - 28px)" }}>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm font-semibold text-foreground">
+              Comparison across states
+            </p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setChartExpanded((prev) => !prev)}
+              title={chartExpanded ? "Minimize chart" : "Maximize chart"}
+            >
+              {chartExpanded ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <div style={{ height: "calc(100% - 32px)" }}>
             <RegionBarChart states={states} filters={filters} />
           </div>
         </div>
