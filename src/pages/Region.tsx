@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Maximize2, Minimize2 } from "lucide-react";
@@ -10,6 +10,7 @@ import {
   type RegionStats,
 } from "@/data/healthcareData";
 import { usePersistedLocation } from "@/hooks/usePersistedLocation";
+import { useGeoJSON } from "@/hooks/useGeoJSON";
 import RegionFilterDropdown, { type FilterType } from "@/components/region/RegionFilterDropdown";
 import RegionInfoPanel from "@/components/region/RegionInfoPanel";
 import RegionBarChart from "@/components/region/RegionBarChart";
@@ -34,6 +35,7 @@ const Region = () => {
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const geoLayerRef = useRef<L.GeoJSON | null>(null);
 
   // Detect country from stored coords
   useEffect(() => {
@@ -48,15 +50,58 @@ const Region = () => {
   const mapConfig = countryMapConfigs[country] ?? {
     center: [39.83, -98.58] as [number, number],
     zoom: 4,
+    geojsonSource: "/geojson/us-states.json",
+    nameProperty: "name",
   };
 
   const showBarChart = filters.length >= 2;
+
+  // Fetch GeoJSON boundaries
+  const { data: geojsonData, loading: geojsonLoading } = useGeoJSON(
+    mapConfig.geojsonSource
+  );
 
   // Red shade map based on the first selected filter
   const redShades = useMemo(() => {
     if (!states) return {};
     return getRedShadeMap(states, filters[0]);
   }, [states, filters]);
+
+  // Build a lookup: lowercase state name → red shade + stats
+  // Includes aliases for GeoJSON name mismatches
+  const stateLookup = useMemo(() => {
+    if (!states) return {};
+    const lookup: Record<string, { color: string; stats: RegionStats; key: string }> = {};
+
+    // Aliases: GeoJSON name → our data name
+    const aliases: Record<string, string> = {
+      "nct of delhi": "delhi",
+      "dadra and nagar haveli": "dadra and nagar haveli and daman and diu",
+      "daman and diu": "dadra and nagar haveli and daman and diu",
+      "jammu & kashmir": "jammu and kashmir",
+      "orissa": "odisha",
+      "uttaranchal": "uttarakhand",
+      "pondicherry": "puducherry",
+    };
+
+    Object.entries(states).forEach(([key, stats]) => {
+      const entry = {
+        color: redShades[key] ?? "hsl(0, 70%, 60%)",
+        stats,
+        key,
+      };
+      lookup[stats.name.toLowerCase()] = entry;
+    });
+
+    // Add alias entries pointing to the same data
+    Object.entries(aliases).forEach(([alias, canonical]) => {
+      if (lookup[canonical]) {
+        lookup[alias] = lookup[canonical];
+      }
+    });
+
+    return lookup;
+  }, [states, redShades]);
 
   // Initialize map
   useEffect(() => {
@@ -82,18 +127,24 @@ const Region = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationGranted]);
 
-  // Update markers when country/filter changes
+  // Render GeoJSON polygons when data/filter/country changes
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !states) return;
+    if (!map || !states || !geojsonData) return;
 
     map.flyTo([mapConfig.center[0], mapConfig.center[1]], mapConfig.zoom, {
       duration: 1.5,
     });
 
-    // Clear existing overlays (circles, markers)
+    // Remove previous GeoJSON layer
+    if (geoLayerRef.current) {
+      map.removeLayer(geoLayerRef.current);
+      geoLayerRef.current = null;
+    }
+
+    // Remove any existing circle markers (user dot)
     map.eachLayer((layer) => {
-      if (layer instanceof L.Circle || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+      if (layer instanceof L.CircleMarker) {
         map.removeLayer(layer);
       }
     });
@@ -111,30 +162,62 @@ const Region = () => {
       )
       .addTo(map);
 
-    // State area circles – L.circle with radius in meters to cover state area
-    Object.entries(states).forEach(([key, stats]) => {
-      const color = redShades[key] ?? "hsl(0, 70%, 60%)";
+    // Add GeoJSON layer with color-coded polygons
+    const nameProperty = mapConfig.nameProperty;
 
-      const circle = L.circle([stats.lat, stats.lng], {
-        radius: stats.approxRadius,
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.45,
-        weight: 2,
-      })
-        .bindPopup(
-          `<div class="text-sm font-semibold">${stats.name}</div>` +
-            `<div class="text-xs">Index: ${stats.healthcareIndex}/100</div>`
-        )
-        .addTo(map);
+    const layer = L.geoJSON(geojsonData, {
+      style: (feature) => {
+        if (!feature) return {};
+        const featureName = (
+          feature.properties?.[nameProperty] ?? ""
+        ).toLowerCase();
 
-      circle.on("click", () => {
-        setSelectedState(key);
-      });
-    });
-  }, [locationGranted, country, filters, states, mapConfig, userLat, userLng, redShades]);
+        const match = stateLookup[featureName];
+        if (match) {
+          return {
+            fillColor: match.color,
+            fillOpacity: 0.6,
+            color: "hsl(0, 0%, 40%)",
+            weight: 1.5,
+          };
+        }
 
-  // Invalidate map size when layout changes (bar chart toggle / expand)
+        // Unmatched features: light gray
+        return {
+          fillColor: "hsl(0, 0%, 90%)",
+          fillOpacity: 0.3,
+          color: "hsl(0, 0%, 60%)",
+          weight: 1,
+        };
+      },
+      onEachFeature: (feature, featureLayer) => {
+        const featureName = (
+          feature.properties?.[nameProperty] ?? ""
+        ).toLowerCase();
+        const match = stateLookup[featureName];
+
+        if (match) {
+          featureLayer.bindPopup(
+            `<div class="text-sm font-semibold">${match.stats.name}</div>` +
+              `<div class="text-xs">Index: ${match.stats.healthcareIndex}/100</div>`
+          );
+          featureLayer.on("click", () => {
+            setSelectedState(match.key);
+          });
+          featureLayer.on("mouseover", (e: any) => {
+            e.target.setStyle({ fillOpacity: 0.85, weight: 2.5 });
+          });
+          featureLayer.on("mouseout", (e: any) => {
+            layer.resetStyle(e.target);
+          });
+        }
+      },
+    }).addTo(map);
+
+    geoLayerRef.current = layer;
+  }, [locationGranted, country, filters, states, mapConfig, userLat, userLng, geojsonData, stateLookup]);
+
+  // Invalidate map size when layout changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -186,6 +269,13 @@ const Region = () => {
       >
         <div ref={mapContainerRef} className="h-full w-full z-0" />
 
+        {/* Loading indicator */}
+        {geojsonLoading && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1000] glass-panel rounded-xl px-4 py-2">
+            <p className="text-sm text-muted-foreground animate-pulse">Loading boundaries…</p>
+          </div>
+        )}
+
         {/* Filter dropdown overlay (top-right) */}
         <div className="absolute top-4 right-4 z-[1000]">
           <RegionFilterDropdown selected={filters} onChange={setFilters} />
@@ -195,7 +285,7 @@ const Region = () => {
         <div className="absolute top-4 left-4 z-[1000] glass-panel rounded-xl px-4 py-2">
           <p className="text-sm font-bold text-foreground">{country}</p>
           <p className="text-xs text-muted-foreground">
-            Click a marker to view details
+            Click a state to view details
           </p>
         </div>
 
@@ -205,7 +295,8 @@ const Region = () => {
           <div
             className="h-3 w-24 rounded-full"
             style={{
-              background: "linear-gradient(to right, hsl(0,70%,85%), hsl(0,70%,35%))",
+              background:
+                "linear-gradient(to right, hsl(0,70%,85%), hsl(0,70%,35%))",
             }}
           />
           <span className="text-xs text-muted-foreground">Most severe</span>
@@ -231,7 +322,7 @@ const Region = () => {
         >
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-semibold text-foreground">
-              Comparison across states
+              Comparison across states (top 10)
             </p>
             <Button
               variant="ghost"
