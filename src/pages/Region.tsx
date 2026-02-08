@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPin, Maximize2, Minimize2 } from "lucide-react";
+import { MapPin, Maximize2, Minimize2, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   regionData,
@@ -121,6 +121,7 @@ const Region = () => {
       center: [mapConfig.center[0], mapConfig.center[1]],
       zoom: mapConfig.zoom,
       zoomControl: false,
+      scrollWheelZoom: true,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -262,18 +263,19 @@ const Region = () => {
   // ─── Map + optional bar chart view ─────────────────────────────
   return (
     <div
-      className="relative flex flex-col"
+      className="relative flex flex-col overflow-y-auto"
       style={{ height: "calc(100vh - 56px)" }}
     >
       {/* Map section */}
       <div
-        className="relative w-full"
+        className="relative w-full flex-shrink-0"
         style={{
           height: showBarChart
             ? chartExpanded
               ? "25%"
               : "55%"
             : "100%",
+          minHeight: showBarChart ? "200px" : undefined,
           transition: "height 0.3s ease",
         }}
       >
@@ -285,6 +287,28 @@ const Region = () => {
             <p className="text-sm text-muted-foreground animate-pulse">Loading boundaries…</p>
           </div>
         )}
+
+        {/* Zoom controls (top-right, below filter) */}
+        <div className="absolute top-16 right-4 z-[1000] flex flex-col gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-md"
+            onClick={() => mapRef.current?.zoomIn()}
+            title="Zoom in"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-md"
+            onClick={() => mapRef.current?.zoomOut()}
+            title="Zoom out"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+        </div>
 
         {/* Filter dropdown overlay (top-right) */}
         <div className="absolute top-4 right-4 z-[1000]">
@@ -346,9 +370,10 @@ const Region = () => {
       {/* Bar chart section (only when 2+ filters) */}
       {showBarChart && states && (
         <div
-          className="w-full bg-card border-t border-border px-4 py-3"
+          className="w-full bg-card border-t border-border px-4 py-3 flex-shrink-0"
           style={{
             height: chartExpanded ? "75%" : "45%",
+            minHeight: "200px",
             transition: "height 0.3s ease",
           }}
         >
