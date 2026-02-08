@@ -301,14 +301,26 @@ const Region = () => {
 
         {/* Legend color scale (bottom-left) */}
         <div className="absolute bottom-4 left-4 z-[1000] glass-panel rounded-xl px-3 py-2 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Least severe</span>
+          <span className="text-xs text-muted-foreground">
+            {filters[0] === "hospitals" || filters[0] === "doctors"
+              ? "Min"
+              : filters[0] === "healthcareIndex"
+              ? "High"
+              : "Low severity"}
+          </span>
           <div
             className="h-3 w-24 rounded-full"
             style={{
               background: getFilterGradient(filters[0]),
             }}
           />
-          <span className="text-xs text-muted-foreground">Most severe</span>
+          <span className="text-xs text-muted-foreground">
+            {filters[0] === "hospitals" || filters[0] === "doctors"
+              ? "Max"
+              : filters[0] === "healthcareIndex"
+              ? "Low"
+              : "High severity"}
+          </span>
         </div>
 
         {/* Info panel */}
