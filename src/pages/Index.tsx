@@ -1,23 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-medical.jpg";
+import WHONewsTicker from "@/components/WHONewsTicker";
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
     <div className="container py-12 flex flex-col items-center">
-      {/* Hero image with floating animation */}
-      <div className="float-animation mb-10">
-        <div className="relative rounded-2xl overflow-hidden shadow-2xl pulse-ring">
-          <img
-            src={heroImage}
-            alt="Healthcare visualization"
-            className="w-full max-w-lg h-auto object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent" />
-        </div>
+      {/* WHO News Ticker */}
+      <div className="mb-10">
+        <WHONewsTicker />
       </div>
 
       {/* Description */}
