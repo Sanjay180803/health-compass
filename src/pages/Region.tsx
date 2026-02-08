@@ -11,6 +11,7 @@ import {
 } from "@/data/healthcareData";
 import { usePersistedLocation } from "@/hooks/usePersistedLocation";
 import { useGeoJSON } from "@/hooks/useGeoJSON";
+import { useSpecializationData } from "@/hooks/useSpecializationData";
 import RegionFilterDropdown, { type FilterType } from "@/components/region/RegionFilterDropdown";
 import RegionInfoPanel from "@/components/region/RegionInfoPanel";
 import RegionBarChart from "@/components/region/RegionBarChart";
@@ -59,6 +60,15 @@ const Region = () => {
   // Fetch GeoJSON boundaries
   const { data: geojsonData, loading: geojsonLoading } = useGeoJSON(
     mapConfig.geojsonSource
+  );
+
+  // Fetch specialization breakdowns (US-only for now)
+  const isUS = country === "United States";
+  const { data: hospitalSpecData } = useSpecializationData(
+    isUS ? "/geojson/states_dept_hospitals.json" : undefined
+  );
+  const { data: doctorSpecData } = useSpecializationData(
+    isUS ? "/geojson/states_dept_doctors.json" : undefined
   );
 
   // Red shade map based on the first selected filter
@@ -307,6 +317,17 @@ const Region = () => {
           <RegionInfoPanel
             stats={currentStats}
             onClose={() => setSelectedState(null)}
+            activeFilters={filters}
+            hospitalSpecializations={
+              selectedState && hospitalSpecData
+                ? hospitalSpecData[currentStats.name] ?? null
+                : null
+            }
+            doctorSpecializations={
+              selectedState && doctorSpecData
+                ? doctorSpecData[currentStats.name] ?? null
+                : null
+            }
           />
         )}
       </div>
