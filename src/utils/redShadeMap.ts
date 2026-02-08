@@ -2,14 +2,25 @@ import type { RegionStats } from "@/data/healthcareData";
 import type { FilterType } from "@/components/region/RegionFilterDropdown";
 
 /**
- * Returns an HSL color string on a red scale.
- * Lower severity → light/pale red; higher severity → deep/dark red.
+ * Color config per filter: hue & saturation for the HSL scale.
+ */
+const FILTER_COLOR_CONFIG: Record<FilterType, { hue: number; saturation: number }> = {
+  healthcareIndex: { hue: 168, saturation: 60 },
+  hospitals: { hue: 200, saturation: 70 },
+  doctors: { hue: 280, saturation: 60 },
+  alerts: { hue: 0, saturation: 65 },
+  climate: { hue: 45, saturation: 80 },
+};
+
+/**
+ * Returns an HSL color string on a filter-specific scale.
+ * Lower severity → light/pale; higher severity → deep/dark.
  * `ratio` 0..1 where 1 = most severe.
  */
-function redShade(ratio: number): string {
-  // Lightness goes from 85% (least severe) to 35% (most severe)
+function filterShade(ratio: number, filter: FilterType): string {
+  const { hue, saturation } = FILTER_COLOR_CONFIG[filter];
   const lightness = 85 - ratio * 50;
-  return `hsl(0, 70%, ${lightness}%)`;
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 /**
@@ -33,9 +44,9 @@ function getFilterNumeric(stats: RegionStats, filter: FilterType): number {
 }
 
 /**
- * For a set of states and a primary filter, returns a map of state key → red shade color.
- * Higher values get darker red; lower values get lighter red.
- * For "healthcareIndex", lower index = worse = darker red (inverted).
+ * For a set of states and a primary filter, returns a map of state key → shade color.
+ * Higher values get darker; lower values get lighter.
+ * For "healthcareIndex", lower index = worse = darker (inverted).
  */
 export function getRedShadeMap(
   states: Record<string, RegionStats>,
@@ -61,14 +72,21 @@ export function getRedShadeMap(
     if (filter === "healthcareIndex") {
       ratio = 1 - ratio;
     }
-    // For alerts, more alerts = more severe (keep as is)
     // For hospitals/doctors, fewer = more severe → invert
     if (filter === "hospitals" || filter === "doctors") {
       ratio = 1 - ratio;
     }
 
-    result[key] = redShade(ratio);
+    result[key] = filterShade(ratio, filter);
   });
 
   return result;
+}
+
+/**
+ * Returns the gradient CSS string for the legend bar for a given filter.
+ */
+export function getFilterGradient(filter: FilterType): string {
+  const { hue, saturation } = FILTER_COLOR_CONFIG[filter];
+  return `linear-gradient(to right, hsl(${hue},${saturation}%,85%), hsl(${hue},${saturation}%,35%))`;
 }

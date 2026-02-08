@@ -15,7 +15,7 @@ import { useSpecializationData } from "@/hooks/useSpecializationData";
 import RegionFilterDropdown, { type FilterType } from "@/components/region/RegionFilterDropdown";
 import RegionInfoPanel from "@/components/region/RegionInfoPanel";
 import RegionBarChart from "@/components/region/RegionBarChart";
-import { getRedShadeMap } from "@/utils/redShadeMap";
+import { getRedShadeMap, getFilterGradient } from "@/utils/redShadeMap";
 
 // Fix Leaflet default marker icons for Vite bundler
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -305,8 +305,7 @@ const Region = () => {
           <div
             className="h-3 w-24 rounded-full"
             style={{
-              background:
-                "linear-gradient(to right, hsl(0,70%,85%), hsl(0,70%,35%))",
+              background: getFilterGradient(filters[0]),
             }}
           />
           <span className="text-xs text-muted-foreground">Most severe</span>
