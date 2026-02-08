@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, CircleMarker, Popup, useMap } from "react-leaflet";
+import { useState, useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Hospital, Stethoscope, Cloud, AlertTriangle, X } from "lucide-react";
@@ -23,15 +22,6 @@ L.Icon.Default.mergeOptions({
 
 type FilterType = "all" | "hospitals" | "doctors" | "climate" | "alerts";
 
-/** Flies the map to a given lat/lng on change */
-function FlyTo({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo([lat, lng], zoom, { duration: 1.5 });
-  }, [lat, lng, zoom, map]);
-  return null;
-}
-
 const Region = () => {
   const [locationGranted, setLocationGranted] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -40,6 +30,9 @@ const Region = () => {
   const [country, setCountry] = useState("United States");
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
   const requestLocation = () => {
     setRequesting(true);
@@ -54,7 +47,6 @@ const Region = () => {
           setRequesting(false);
         },
         () => {
-          // Denied – use defaults
           setLocationGranted(true);
           setRequesting(false);
         },
@@ -70,7 +62,7 @@ const Region = () => {
     selectedState && states ? states[selectedState] : null;
   const mapConfig = countryMapConfigs[country] ?? { center: [39.83, -98.58] as [number, number], zoom: 4 };
 
-  const getFilterLabel = (stats: RegionStats): string => {
+  const getFilterLabel = useCallback((stats: RegionStats): string => {
     switch (filter) {
       case "hospitals":
         return `🏥 ${stats.hospitals.toLocaleString()} hospitals`;
@@ -85,7 +77,71 @@ const Region = () => {
       default:
         return `Index: ${stats.healthcareIndex}/100`;
     }
-  };
+  }, [filter]);
+
+  // Initialize map
+  useEffect(() => {
+    if (!locationGranted || !mapContainerRef.current || mapRef.current) return;
+
+    const map = L.map(mapContainerRef.current, {
+      center: [mapConfig.center[0], mapConfig.center[1]],
+      zoom: mapConfig.zoom,
+      zoomControl: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+    // Only run once when location is granted
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationGranted]);
+
+  // Fly to country center & update markers when country/filter changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !states) return;
+
+    map.flyTo([mapConfig.center[0], mapConfig.center[1]], mapConfig.zoom, { duration: 1.5 });
+
+    // Clear existing markers
+    map.eachLayer((layer) => {
+      if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+        map.removeLayer(layer);
+      }
+    });
+
+    // User location blue dot
+    L.circleMarker([userLat, userLng], {
+      radius: 10,
+      color: "hsl(200, 70%, 50%)",
+      fillColor: "hsl(200, 70%, 50%)",
+      fillOpacity: 0.6,
+      weight: 3,
+    })
+      .bindPopup('<span class="font-semibold text-sm">📍 Your location</span>')
+      .addTo(map);
+
+    // State markers
+    Object.entries(states).forEach(([key, stats]) => {
+      const marker = L.marker([stats.lat, stats.lng])
+        .bindPopup(
+          `<div class="text-sm font-semibold">${stats.name}</div>` +
+          `<div class="text-xs">${getFilterLabel(stats)}</div>`
+        )
+        .addTo(map);
+
+      marker.on("click", () => {
+        setSelectedState(key);
+      });
+    });
+  }, [locationGranted, country, filter, states, mapConfig, userLat, userLng, getFilterLabel]);
 
   // ─── Permission screen ─────────────────────────────────────────
   if (!locationGranted) {
@@ -108,48 +164,7 @@ const Region = () => {
   // ─── Map view ──────────────────────────────────────────────────
   return (
     <div className="relative" style={{ height: "calc(100vh - 56px)" }}>
-      <MapContainer
-        center={[mapConfig.center[0], mapConfig.center[1]]}
-        zoom={mapConfig.zoom}
-        className="h-full w-full z-0"
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        {/* Fly to the country center */}
-        <FlyTo lat={mapConfig.center[0]} lng={mapConfig.center[1]} zoom={mapConfig.zoom} />
-
-        {/* User location – pulsing blue dot */}
-        <CircleMarker
-          center={[userLat, userLng]}
-          radius={10}
-          pathOptions={{ color: "hsl(200, 70%, 50%)", fillColor: "hsl(200, 70%, 50%)", fillOpacity: 0.6, weight: 3 }}
-        >
-          <Popup>
-            <span className="font-semibold text-sm">📍 Your location</span>
-          </Popup>
-        </CircleMarker>
-
-        {/* State markers */}
-        {states &&
-          Object.entries(states).map(([key, stats]) => (
-            <Marker
-              key={key}
-              position={[stats.lat, stats.lng]}
-              eventHandlers={{
-                click: () => setSelectedState(key),
-              }}
-            >
-              <Popup>
-                <div className="text-sm font-semibold">{stats.name}</div>
-                <div className="text-xs">{getFilterLabel(stats)}</div>
-              </Popup>
-            </Marker>
-          ))}
-      </MapContainer>
+      <div ref={mapContainerRef} className="h-full w-full z-0" />
 
       {/* ─── Filter dropdown overlay (top-right) ────────────────── */}
       <div className="absolute top-4 right-4 z-[1000]">
