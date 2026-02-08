@@ -38,10 +38,10 @@ function SpecializationTable({
       </div>
       <ScrollArea className="h-36 rounded-md border border-border">
         <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border bg-muted/40 sticky top-0">
-              <th className="text-left px-2 py-1 font-medium text-muted-foreground">Specialization</th>
-              <th className="text-right px-2 py-1 font-medium text-muted-foreground">Count</th>
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b border-border bg-muted">
+              <th className="text-left px-2 py-1 font-medium text-muted-foreground bg-muted">Specialization</th>
+              <th className="text-right px-2 py-1 font-medium text-muted-foreground bg-muted">Count</th>
             </tr>
           </thead>
           <tbody>
@@ -80,6 +80,13 @@ const RegionInfoPanel = ({
   const showDoctorBreakdown =
     activeFilters.includes("doctors") && doctorSpecializations;
 
+  const totalHospitals = hospitalSpecializations
+    ? Object.values(hospitalSpecializations).reduce((sum, v) => sum + v, 0)
+    : stats.hospitals;
+  const totalDoctors = doctorSpecializations
+    ? Object.values(doctorSpecializations).reduce((sum, v) => sum + v, 0)
+    : stats.doctors;
+
   return (
     <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[420px] z-[1000] glass-panel rounded-2xl p-5 space-y-3 animate-in slide-in-from-bottom-4 duration-300 max-h-[70vh] overflow-y-auto">
       <div className="flex items-center justify-between">
@@ -96,8 +103,8 @@ const RegionInfoPanel = ({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <LegendItem icon={Hospital} label="Hospitals" value={stats.hospitals.toLocaleString()} />
-        <LegendItem icon={Stethoscope} label="Doctors" value={stats.doctors.toLocaleString()} />
+        <LegendItem icon={Hospital} label="Hospitals" value={totalHospitals.toLocaleString()} />
+        <LegendItem icon={Stethoscope} label="Doctors" value={totalDoctors.toLocaleString()} />
         <LegendItem icon={Cloud} label="Climate" value={stats.climate} />
         <LegendItem icon={AlertTriangle} label="Health Index" value={`${stats.healthcareIndex}/100`} />
       </div>
