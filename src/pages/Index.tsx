@@ -16,15 +16,15 @@ const Index = () => {
       {/* Description */}
       <div className="max-w-2xl text-center mb-10 space-y-3">
         <h1 className="text-3xl font-bold text-foreground tracking-tight">
-          Welcome to HealthScope
+          Holey Health
         </h1>
         <p className="text-muted-foreground leading-relaxed">
-          Your intelligent healthcare companion — explore real-time health statistics for your region,
-          track hospital availability, and get AI-powered answers to your medical queries.
-          Stay informed about healthcare infrastructure across the globe.
+          Your intelligent healthcare intelligence layer — explore real-time medical capacity,
+          uncover infrastructure gaps, and get AI-powered insights from complex healthcare data.
+          See where care exists, where it's missing, and where action can save lives.
         </p>
         <p className="text-muted-foreground text-sm">
-          Powered by live data to help you make better health decisions, wherever you are.
+          Powered by agentic AI to turn medical documents into decisions.
         </p>
       </div>
 
