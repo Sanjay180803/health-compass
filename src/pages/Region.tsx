@@ -1,21 +1,43 @@
 import { useState, useEffect } from "react";
-import { MapPin, Hospital, Stethoscope, Cloud, AlertTriangle } from "lucide-react";
+import { MapContainer, TileLayer, Marker, CircleMarker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { MapPin, Hospital, Stethoscope, Cloud, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { regionData, getHealthcareColor, getHealthcareTextColor, type RegionStats } from "@/data/healthcareData";
+import {
+  regionData,
+  countryMapConfigs,
+  detectCountryFromCoords,
+  getHealthcareColor,
+  type RegionStats,
+} from "@/data/healthcareData";
+
+// Fix Leaflet default marker icons for Vite bundler
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 type FilterType = "all" | "hospitals" | "doctors" | "climate" | "alerts";
 
-// Simple mapping from coordinates to a demo country/state
-function guessLocation(): { country: string; state: string } {
-  // Default to US/California for demo
-  return { country: "United States", state: "California" };
+/** Flies the map to a given lat/lng on change */
+function FlyTo({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([lat, lng], zoom, { duration: 1.5 });
+  }, [lat, lng, zoom, map]);
+  return null;
 }
 
 const Region = () => {
   const [locationGranted, setLocationGranted] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [country, setCountry] = useState("");
+  const [userLat, setUserLat] = useState(39.83);
+  const [userLng, setUserLng] = useState(-98.58);
+  const [country, setCountry] = useState("United States");
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
 
@@ -23,75 +45,117 @@ const Region = () => {
     setRequesting(true);
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        () => {
-          const loc = guessLocation();
-          setCountry(loc.country);
-          setSelectedState(loc.state);
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLat(latitude);
+          setUserLng(longitude);
+          setCountry(detectCountryFromCoords(latitude, longitude));
           setLocationGranted(true);
           setRequesting(false);
         },
         () => {
-          // Denied or error – use default
-          const loc = guessLocation();
-          setCountry(loc.country);
-          setSelectedState(loc.state);
+          // Denied – use defaults
           setLocationGranted(true);
           setRequesting(false);
-        }
+        },
       );
     } else {
-      const loc = guessLocation();
-      setCountry(loc.country);
-      setSelectedState(loc.state);
       setLocationGranted(true);
       setRequesting(false);
     }
   };
 
-  useEffect(() => {
-    requestLocation();
-  }, []);
-
   const states = country ? regionData[country] : null;
-  const currentStats: RegionStats | null = selectedState && states ? states[selectedState] : null;
+  const currentStats: RegionStats | null =
+    selectedState && states ? states[selectedState] : null;
+  const mapConfig = countryMapConfigs[country] ?? { center: [39.83, -98.58] as [number, number], zoom: 4 };
 
-  const getFilteredValue = (stats: RegionStats): string | number => {
+  const getFilterLabel = (stats: RegionStats): string => {
     switch (filter) {
-      case "hospitals": return stats.hospitals;
-      case "doctors": return stats.doctors;
-      case "climate": return stats.climate;
-      case "alerts": return stats.healthAlerts.length > 0 ? stats.healthAlerts.join(", ") : "None";
-      default: return stats.healthcareIndex;
+      case "hospitals":
+        return `🏥 ${stats.hospitals.toLocaleString()} hospitals`;
+      case "doctors":
+        return `🩺 ${stats.doctors.toLocaleString()} doctors`;
+      case "climate":
+        return `🌤 ${stats.climate}`;
+      case "alerts":
+        return stats.healthAlerts.length > 0
+          ? `⚠ ${stats.healthAlerts[0]}`
+          : "✓ No alerts";
+      default:
+        return `Index: ${stats.healthcareIndex}/100`;
     }
   };
 
+  // ─── Permission screen ─────────────────────────────────────────
   if (!locationGranted) {
     return (
-      <div className="container py-20 flex flex-col items-center justify-center text-center space-y-6">
-        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center pulse-ring">
-          <MapPin className="h-8 w-8 text-primary" />
+      <div className="flex flex-col items-center justify-center text-center gap-6" style={{ height: "calc(100vh - 56px)" }}>
+        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center pulse-ring">
+          <MapPin className="h-10 w-10 text-primary" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground">Access Your Location</h1>
-        <p className="text-muted-foreground max-w-md">
-          We need your location to show healthcare statistics for your region. Your data stays private.
+        <h1 className="text-2xl font-bold text-foreground">Enable Location Access</h1>
+        <p className="text-muted-foreground max-w-md text-sm">
+          We need your location to display healthcare statistics for your region on an interactive map. Your data stays private.
         </p>
         <Button onClick={requestLocation} disabled={requesting} size="lg">
-          {requesting ? "Requesting..." : "Allow Location Access"}
+          {requesting ? "Requesting…" : "Allow Location Access"}
         </Button>
       </div>
     );
   }
 
+  // ─── Map view ──────────────────────────────────────────────────
   return (
-    <div className="container py-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{country}</h1>
-          <p className="text-muted-foreground text-sm">Select a state/region to view health data</p>
-        </div>
+    <div className="relative" style={{ height: "calc(100vh - 56px)" }}>
+      <MapContainer
+        center={[mapConfig.center[0], mapConfig.center[1]]}
+        zoom={mapConfig.zoom}
+        className="h-full w-full z-0"
+        zoomControl={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        {/* Fly to the country center */}
+        <FlyTo lat={mapConfig.center[0]} lng={mapConfig.center[1]} zoom={mapConfig.zoom} />
+
+        {/* User location – pulsing blue dot */}
+        <CircleMarker
+          center={[userLat, userLng]}
+          radius={10}
+          pathOptions={{ color: "hsl(200, 70%, 50%)", fillColor: "hsl(200, 70%, 50%)", fillOpacity: 0.6, weight: 3 }}
+        >
+          <Popup>
+            <span className="font-semibold text-sm">📍 Your location</span>
+          </Popup>
+        </CircleMarker>
+
+        {/* State markers */}
+        {states &&
+          Object.entries(states).map(([key, stats]) => (
+            <Marker
+              key={key}
+              position={[stats.lat, stats.lng]}
+              eventHandlers={{
+                click: () => setSelectedState(key),
+              }}
+            >
+              <Popup>
+                <div className="text-sm font-semibold">{stats.name}</div>
+                <div className="text-xs">{getFilterLabel(stats)}</div>
+              </Popup>
+            </Marker>
+          ))}
+      </MapContainer>
+
+      {/* ─── Filter dropdown overlay (top-right) ────────────────── */}
+      <div className="absolute top-4 right-4 z-[1000]">
         <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by..." />
+          <SelectTrigger className="w-48 bg-card/90 backdrop-blur-md border-border shadow-lg">
+            <SelectValue placeholder="Filter by…" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Overall Index</SelectItem>
@@ -103,52 +167,39 @@ const Region = () => {
         </Select>
       </div>
 
-      {/* State grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {states &&
-          Object.entries(states).map(([key, stats]) => {
-            const isSelected = selectedState === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setSelectedState(key)}
-                className={`relative p-4 rounded-xl border text-left transition-all hover:shadow-md ${
-                  isSelected
-                    ? "border-primary bg-primary/5 shadow-md"
-                    : "border-border bg-card hover:border-primary/30"
-                }`}
-              >
-                <div className={`absolute top-2 right-2 h-3 w-3 rounded-full ${getHealthcareColor(stats.healthcareIndex)}`} />
-                <p className="font-semibold text-sm text-foreground">{stats.name}</p>
-                <p className={`text-xs mt-1 ${getHealthcareTextColor(stats.healthcareIndex)}`}>
-                  {filter === "all"
-                    ? `Index: ${stats.healthcareIndex}/100`
-                    : `${filter}: ${getFilteredValue(stats)}`}
-                </p>
-              </button>
-            );
-          })}
+      {/* ─── Country label (top-left) ───────────────────────────── */}
+      <div className="absolute top-4 left-4 z-[1000] glass-panel rounded-xl px-4 py-2">
+        <p className="text-sm font-bold text-foreground">{country}</p>
+        <p className="text-xs text-muted-foreground">Click a marker to view details</p>
       </div>
 
-      {/* Detail panel */}
+      {/* ─── Translucent legend / info panel (bottom) ───────────── */}
       {currentStats && (
-        <div className="glass-panel rounded-2xl p-6 space-y-4">
-          <h2 className="text-xl font-bold text-foreground">{currentStats.name}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={Hospital} label="Hospitals" value={currentStats.hospitals.toLocaleString()} />
-            <StatCard icon={Stethoscope} label="Doctors" value={currentStats.doctors.toLocaleString()} />
-            <StatCard icon={Cloud} label="Climate" value={currentStats.climate} />
-            <StatCard
-              icon={AlertTriangle}
-              label="Healthcare Index"
-              value={`${currentStats.healthcareIndex}/100`}
-              highlight
-            />
+        <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[400px] z-[1000] glass-panel rounded-2xl p-5 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`h-3 w-3 rounded-full ${getHealthcareColor(currentStats.healthcareIndex)}`} />
+              <h3 className="text-lg font-bold text-foreground">{currentStats.name}</h3>
+            </div>
+            <button
+              onClick={() => setSelectedState(null)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <LegendItem icon={Hospital} label="Hospitals" value={currentStats.hospitals.toLocaleString()} />
+            <LegendItem icon={Stethoscope} label="Doctors" value={currentStats.doctors.toLocaleString()} />
+            <LegendItem icon={Cloud} label="Climate" value={currentStats.climate} />
+            <LegendItem icon={AlertTriangle} label="Health Index" value={`${currentStats.healthcareIndex}/100`} />
+          </div>
+
           {currentStats.healthAlerts.length > 0 && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-              <p className="text-sm font-semibold text-destructive mb-1">⚠ Health Alerts</p>
-              <ul className="text-sm text-foreground space-y-1">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+              <p className="text-xs font-semibold text-destructive mb-1">⚠ Health Alerts</p>
+              <ul className="text-xs text-foreground space-y-0.5">
                 {currentStats.healthAlerts.map((alert, i) => (
                   <li key={i}>• {alert}</li>
                 ))}
@@ -161,12 +212,14 @@ const Region = () => {
   );
 };
 
-function StatCard({ icon: Icon, label, value, highlight }: { icon: any; label: string; value: string; highlight?: boolean }) {
+function LegendItem({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-1">
-      <Icon className={`h-5 w-5 ${highlight ? "text-primary" : "text-muted-foreground"}`} />
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-semibold text-foreground">{value}</p>
+    <div className="flex items-start gap-2">
+      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-semibold text-foreground">{value}</p>
+      </div>
     </div>
   );
 }
