@@ -35,8 +35,8 @@ const Index = () => {
         </p>
       </div>
 
-      {/* CTA Button - aligned left */}
-      <div className="w-full max-w-2xl">
+      {/* CTA Button - centered */}
+      <div className="w-full max-w-2xl flex justify-center">
         <Button
           onClick={() => navigate("/chatbot")}
           size="lg"
